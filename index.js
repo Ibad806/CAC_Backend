@@ -4,7 +4,7 @@ import 'dotenv/config'
 import mongoose from 'mongoose';
 
 const app = express();
-const PORT = 4000;
+// const PORT = 4000;
 
 app.use(morgan('tiny'));
 app.use(express.json());
@@ -19,4 +19,4 @@ app.get('/', (req, res) => {
     res.send('Hello World!');
 });
 
-app.listen(PORT , () => console.log('SERVER IS RUNNING'))
+app.listen(process.env.PORT , () => console.log('SERVER IS RUNNING'))
