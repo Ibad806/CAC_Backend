@@ -4,6 +4,7 @@ import cors from "cors";
 import "dotenv/config";
 import mongoose from "mongoose";
 import authRoutes from "./routers/auth.js";
+import contactRoutes from "./routers/contact.js";
 import passport from "passport";
 import session from "express-session";
 
@@ -25,6 +26,7 @@ app.use(
 app.use(morgan("tiny"));
 app.use(express.json());
 
+// http://localhost:5173
 app.use(
   cors({
     origin: ["https://co-curriculum-activities-cs-it.vercel.app"],
@@ -50,6 +52,7 @@ mongoose
 
 // Use routes
 app.use("/auth", authRoutes);
+app.use("/contact", contactRoutes);
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
