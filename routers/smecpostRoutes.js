@@ -1,5 +1,6 @@
 import express from "express";
 import SMECPost from "../models/SMECPost.js"; // Adjust path if needed
+import rateLimit from "express-rate-limit";
 
 const router = express.Router();
 
@@ -36,20 +37,58 @@ router.get("/smecpost", async (req, res) => {
   }
 });
 
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+});
+
 // Get application by email
-router.get('/application', async (req, res) => {
+router.get('/application', limiter , async (req, res) => {
+  try {
     const { email } = req.query;
-    try {
-      const application = await SMECPost.findOne({ email });
-      if (!application) {
-        return res.status(404).json({ message: 'Application not found' });
-      }
-      res.json(application);
-    } catch (error) {
-      console.error('Error fetching application:', error);
-      res.status(500).json({ message: 'Server error' });
+    
+    if (!email) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Email parameter is required' 
+      });
     }
-  });
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid email format' 
+      });
+    }
+
+    const application = await SMECPost.find({ Email: email }).sort({ createdAt: -1 }).lean();
+    
+    if (!application) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'No application found for this email' 
+      });
+    }
+    console.log("APPLICATION", application);
+    
+
+    res.json({
+      success: true,
+      data: application
+
+    });
+
+  } catch (error) {
+    console.error('Error fetching application:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
 
 // UPDATE - PUT: Update status of an application
 router.put("/smecpost/:id", async (req, res) => {
