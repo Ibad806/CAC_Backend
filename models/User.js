@@ -8,6 +8,8 @@ const UserSchema = new Schema({
     role: { type: String, enum: ["user", "isParticpant", "judge", "admin"], default: "user" },
     isParticpant: { type: Boolean, default: false },
     CNIC: { type: String , unique: true, sparse: true, },
+    position: { type: String },
+    subpost: { type: String },
 }, { timestamps: true })
 
 const User = mongoose.model("Users", UserSchema, 'users');

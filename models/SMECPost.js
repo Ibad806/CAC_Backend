@@ -9,6 +9,14 @@ const SMECPostSchema = new Schema({
     Post: { type: String, required: true },
     subpost: { type: String },
     Status: { type: String, enum: ["Accepted", "Rejected", "Pending"], default: "Pending" },
+    categoryInterestedIn: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Category",
+      },
+      postAppliedFor: {
+        type: String,
+        enum: ["Lead", "Co-Lead"],
+      },      
     AdditionalDetails: { type: String },
 }, { timestamps: true })
 

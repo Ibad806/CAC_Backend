@@ -7,6 +7,7 @@ import authRoutes from "./routers/authRoutes.js";
 import contactRoutes from "./routers/contactRoutes.js";
 import eventRoutes from "./routers/eventRoutes.js";
 import smecpostRoutes from "./routers/smecpostRoutes.js";
+import categoryRoutes from "./routers/categoryRoutes.js";
 import passport from "passport";
 import session from "express-session";
 
@@ -58,6 +59,7 @@ app.use("/auth", authRoutes);
 app.use("/contact", contactRoutes);
 app.use("/event", eventRoutes);
 app.use("/smecpost", smecpostRoutes);
+app.use("/category", categoryRoutes);
 
 app.get("/", (req, res) => {
   res.send("Hello World!");

@@ -1,6 +1,7 @@
 import express from "express";
 import SMECPost from "../models/SMECPost.js"; // Adjust path if needed
 import rateLimit from "express-rate-limit";
+import User from "../models/User.js";
 
 const router = express.Router();
 
@@ -13,7 +14,7 @@ router.post("/smecpost", async (req, res) => {
       Name: name,
       RollNumber: rollNumber,
       ContactNumber: phone,
-      Email: email, // Optional email field
+      Email: email, 
       Post: position,
       subpost: subpost || "Lead",
       AdditionalDetails: additionalDetails, // Optional additional details field
@@ -99,18 +100,33 @@ router.put("/smecpost/:id", async (req, res) => {
       return res.status(400).json({ message: "Invalid status value" });
     }
 
-    const updatedPost = await SMECPost.findByIdAndUpdate(
-      req.params.id,
-      { Status: status },
-      { new: true }
-    );
+    // Find the application
+    const application = await SMECPost.findById(req.params.id);
 
-    if (!updatedPost) {
+    if (!application) {
       return res.status(404).json({ message: "Application not found" });
     }
 
-    res.status(200).json({ message: "Status updated", data: updatedPost });
+    // Update application status
+    application.Status = status;
+    await application.save();
+
+    // If application is accepted, update user
+    if (status === "Accepted") {
+      const user = await User.findOne({ email: application.Email });
+
+      if (user) {
+        user.isParticpant = true;
+        user.role = "isParticpant";
+        user.position = application.Post;     // Add these fields to your User schema if not already present
+        user.subpost = application.subpost;
+        await user.save();
+      }
+    }
+
+    res.status(200).json({ message: "Status updated", data: application });
   } catch (error) {
+    console.error("Error updating application:", error);
     res.status(500).json({ message: "Error updating post", error });
   }
 });
