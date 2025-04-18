@@ -5,7 +5,8 @@ import multer from "multer";
 import cloudinary from "cloudinary";
 
 const router = express.Router();
-const upload = multer({ dest: "uploads/" });
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 // CREATE category
 router.post(
