@@ -9,151 +9,228 @@ const upload = multer({ dest: "uploads/" });
 
 // CREATE category
 router.post(
-    "/categories",
-    upload.fields([
-      { name: "cardImage", maxCount: 1 },
-      { name: "bannerImage", maxCount: 1 },
-    ]),
-    async (req, res) => {
-      try {
-        const { title, description, lead, coLead } = req.body;
-  
-        let cardImage = "";
-        let cardImagePublicId = "";
-        let bannerImage = "";
-        let bannerImagePublicId = "";
-  
-        if (req.files.cardImage) {
-          const result = await cloudinary.uploader.upload(
-            req.files.cardImage[0].path,
-            { folder: "card-images" }
+  "/categories",
+  upload.fields([
+    { name: "cardImage", maxCount: 1 },
+    { name: "bannerImage", maxCount: 1 },
+  ]),
+  async (req, res) => {
+    try {
+      const { title, description, lead, coLead } = req.body;
+
+      console.log("Request Body:", req.body);
+      console.log("Uploaded Files:", req.files);
+
+      let cardImage = "";
+      let cardImagePublicId = "";
+      let bannerImage = "";
+      let bannerImagePublicId = "";
+
+      // Helper function to upload image to Cloudinary
+      const uploadToCloudinary = async (file) => {
+        if (!file) return null;
+        
+        return new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            { folder: "category-images" },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
           );
-          cardImage = result.secure_url;
-          cardImagePublicId = result.public_id;
-        }
-  
-        if (req.files.bannerImage) {
-          const result = await cloudinary.uploader.upload(
-            req.files.bannerImage[0].path,
-            { folder: "banner-images" }
-          );
-          bannerImage = result.secure_url;
-          bannerImagePublicId = result.public_id;
-        }
-  
-        const category = new Category({
-          title,
-          description,
-          lead,
-          coLead,
-          cardImage,
-          cardImagePublicId,
-          bannerImage,
-          bannerImagePublicId,
+          
+          // Create a readable stream from buffer
+          const bufferStream = new stream.PassThrough();
+          bufferStream.end(file.buffer);
+          bufferStream.pipe(uploadStream);
         });
-  
-        await category.save();
-        res.status(201).json(category);
-      } catch (err) {
-        res.status(500).json({ error: err.message });
-      }
-    }
-  );
-  
-  // UPDATE category
-  router.put(
-    "/categories/:id",
-    upload.fields([
-      { name: "cardImage", maxCount: 1 },
-      { name: "bannerImage", maxCount: 1 },
-    ]),
-    async (req, res) => {
-      try {
-        const category = await Category.findById(req.params.id);
-        if (!category) {
-          return res.status(404).json({ error: "Category not found" });
-        }
-  
-        const { title, description, lead, coLead } = req.body;
-  
-        // Delete and update cardImage if new one uploaded
-        if (req.files.cardImage) {
-          if (category.cardImagePublicId) {
-            await cloudinary.uploader.destroy(category.cardImagePublicId);
+      };
+
+      // Upload card image if exists
+      if (req.files?.cardImage && req.files.cardImage[0]) {
+        try {
+          const result = await uploadToCloudinary(req.files.cardImage[0]);
+          if (result) {
+            cardImage = result.secure_url;
+            cardImagePublicId = result.public_id;
           }
-  
-          const result = await cloudinary.uploader.upload(
-            req.files.cardImage[0].path,
-            { folder: "card-images" }
-          );
-  
-          category.cardImage = result.secure_url;
-          category.cardImagePublicId = result.public_id;
+        } catch (uploadError) {
+          console.error("Error uploading card image:", uploadError);
         }
-  
-        // Delete and update bannerImage if new one uploaded
-        if (req.files.bannerImage) {
-          if (category.bannerImagePublicId) {
-            await cloudinary.uploader.destroy(category.bannerImagePublicId);
-          }
-  
-          const result = await cloudinary.uploader.upload(
-            req.files.bannerImage[0].path,
-            { folder: "banner-images" }
-          );
-  
-          category.bannerImage = result.secure_url;
-          category.bannerImagePublicId = result.public_id;
-        }
-  
-        category.title = title;
-        category.description = description;
-        category.lead = lead;
-        category.coLead = coLead;
-  
-        const updatedCategory = await category.save();
-        res.json(updatedCategory);
-      } catch (err) {
-        res.status(500).json({ error: err.message });
       }
+
+      // Upload banner image if exists
+      if (req.files?.bannerImage && req.files.bannerImage[0]) {
+        try {
+          const result = await uploadToCloudinary(req.files.bannerImage[0]);
+          if (result) {
+            bannerImage = result.secure_url;
+            bannerImagePublicId = result.public_id;
+          }
+        } catch (uploadError) {
+          console.error("Error uploading banner image:", uploadError);
+        }
+      }
+
+      const category = new Category({
+        title,
+        description,
+        lead,
+        coLead,
+        cardImage,
+        cardImagePublicId,
+        bannerImage,
+        bannerImagePublicId,
+      });
+
+      await category.save();
+      res.status(201).json({ success: true, category });
+    } catch (err) {
+      console.error("Error creating category:", err);
+      res.status(500).json({ 
+        success: false, 
+        error: err.message,
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+      });
     }
-  );
-  
-  // DELETE category
-  router.delete("/categories/:id", async (req, res) => {
+  }
+);
+
+// UPDATE category
+router.put(
+  "/categories/:id",
+  upload.fields([
+    { name: "cardImage", maxCount: 1 },
+    { name: "bannerImage", maxCount: 1 },
+  ]),
+  async (req, res) => {
     try {
       const category = await Category.findById(req.params.id);
-  
       if (!category) {
-        return res.status(404).json({ error: "Category not found" });
+        return res.status(404).json({ success: false, error: "Category not found" });
       }
-  
-      // Delete images from Cloudinary
-      if (category.cardImagePublicId) {
-        await cloudinary.uploader.destroy(category.cardImagePublicId);
+
+      const { title, description, lead, coLead } = req.body;
+
+      // Helper function for Cloudinary upload
+      const uploadImage = async (file, publicIdToDelete = null) => {
+        try {
+          // Delete old image if exists
+          if (publicIdToDelete) {
+            await cloudinary.uploader.destroy(publicIdToDelete);
+          }
+
+          // Upload new image using stream
+          return new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+              { folder: "category-images" },
+              (error, result) => {
+                if (error) reject(error);
+                else resolve(result);
+              }
+            );
+            
+            const bufferStream = new stream.PassThrough();
+            bufferStream.end(file.buffer);
+            bufferStream.pipe(uploadStream);
+          });
+        } catch (error) {
+          console.error("Image upload error:", error);
+          throw error;
+        }
+      };
+
+      // Process card image if uploaded
+      if (req.files?.cardImage && req.files.cardImage[0]) {
+        try {
+          const result = await uploadImage(
+            req.files.cardImage[0],
+            category.cardImagePublicId
+          );
+          category.cardImage = result.secure_url;
+          category.cardImagePublicId = result.public_id;
+        } catch (error) {
+          console.error("Failed to update card image:", error);
+          // Continue with other updates even if image upload fails
+        }
       }
-  
-      if (category.bannerImagePublicId) {
-        await cloudinary.uploader.destroy(category.bannerImagePublicId);
+
+      // Process banner image if uploaded
+      if (req.files?.bannerImage && req.files.bannerImage[0]) {
+        try {
+          const result = await uploadImage(
+            req.files.bannerImage[0],
+            category.bannerImagePublicId
+          );
+          category.bannerImage = result.secure_url;
+          category.bannerImagePublicId = result.public_id;
+        } catch (error) {
+          console.error("Failed to update banner image:", error);
+          // Continue with other updates even if image upload fails
+        }
       }
-  
-      await category.deleteOne();
-      res.json({ message: "Category and its images deleted" });
+
+      // Update other fields
+      category.title = title || category.title;
+      category.description = description || category.description;
+      category.lead = lead || category.lead;
+      category.coLead = coLead || category.coLead;
+
+      const updatedCategory = await category.save();
+      
+      res.json({
+        success: true,
+        category: updatedCategory,
+        message: "Category updated successfully"
+      });
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      console.error("Error updating category:", err);
+      res.status(500).json({ 
+        success: false, 
+        error: err.message,
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+      });
     }
-  });
-  
-  // GET all categories
-  router.get("/categories", async (req, res) => {
-    try {
-      const categories = await Category.find().populate("lead").populate("coLead");
-      res.json(categories);
-    } catch (err) {
-      res.status(500).json({ error: err.message });
+  }
+);
+
+// DELETE category
+router.delete("/categories/:id", async (req, res) => {
+  try {
+    const category = await Category.findById(req.params.id);
+
+    if (!category) {
+      return res.status(404).json({ error: "Category not found" });
     }
-  });
-  
+
+    // Delete images from Cloudinary
+    if (category.cardImagePublicId) {
+      await cloudinary.uploader.destroy(category.cardImagePublicId);
+    }
+
+    if (category.bannerImagePublicId) {
+      await cloudinary.uploader.destroy(category.bannerImagePublicId);
+    }
+
+    await category.deleteOne();
+    res.json({ message: "Category and its images deleted" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET all categories
+router.get("/categories", async (req, res) => {
+  try {
+    const categories = await Category.find()
+      .populate("lead")
+      .populate("coLead");
+    res.json(categories);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET: Fetch participants by subpost (lead and co lead)
 router.get("/users/accepted", async (req, res) => {
   try {
@@ -182,8 +259,5 @@ router.get("/users/accepted", async (req, res) => {
     });
   }
 });
-
-
-
 
 export default router;
