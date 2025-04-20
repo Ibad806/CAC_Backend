@@ -8,6 +8,7 @@ import contactRoutes from "./routers/contactRoutes.js";
 import eventRoutes from "./routers/eventRoutes.js";
 import smecpostRoutes from "./routers/smecpostRoutes.js";
 import categoryRoutes from "./routers/categoryRoutes.js";
+import gameRoutes from "./routers/gameRoutes.js";
 import passport from "passport";
 import session from "express-session";
 
@@ -35,7 +36,7 @@ app.use(express.json());
 // https://co-curriculum-activities-cs-it.vercel.app
 app.use(
   cors({
-    origin: ["https://co-curriculum-activities-cs-it.vercel.app"],
+    origin: ["http://localhost:5173"],
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -62,6 +63,7 @@ app.use("/contact", contactRoutes);
 app.use("/event", eventRoutes);
 app.use("/smecpost", smecpostRoutes);
 app.use("/category", categoryRoutes);
+app.use("/creategame", gameRoutes);
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
