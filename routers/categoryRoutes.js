@@ -179,12 +179,11 @@ router.get("/categories", async (req, res) => {
 });
 
 // GET - Single game by ID
-router.get("/creategame/:id", async (req, res) => {
+router.get("/categories/:id", async (req, res) => {
   try {
-    const category = await Creategame.findById(req.params.id)
-      .populate("category", "title")
-      .populate("lead", "Name")
-      .populate("coLead", "Name");
+    console.log("Fetching category with ID:", req.params.id); // Debugging line
+    
+    const category = await Category.findById(req.params.id)
 
     if (!category) return res.status(404).send({ message: "single category not found" });
     res.status(200).send(category);

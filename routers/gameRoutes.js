@@ -106,7 +106,7 @@ router.put("/creategame/:id", async (req, res) => {
 // GET - All games
 router.get("/creategame", async (req, res) => {
   try {
-    const games = await Creategame.find()
+    const games = await Creategame.find({})
       .populate("category", "title")       // Optional: populate category info
       .populate("lead", "Name")            // Optional: populate lead user name
       .populate("coLead", "Name")          // Optional: populate co-lead user name
@@ -121,11 +121,7 @@ router.get("/creategame", async (req, res) => {
 // GET - Single game by ID
 router.get("/creategame/:id", async (req, res) => {
   try {
-    const game = await Creategame.findById(req.params.id)
-      .populate("category", "title")
-      .populate("lead", "Name")
-      .populate("coLead", "Name");
-
+    const game = await Creategame.findById({ category: req.params.categoryId })
     if (!game) return res.status(404).send({ message: "Game not found" });
     res.status(200).send(game);
   } catch (error) {
