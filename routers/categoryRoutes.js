@@ -178,6 +178,21 @@ router.get("/categories", async (req, res) => {
   }
 });
 
+// GET - Single game by ID
+router.get("/creategame/:id", async (req, res) => {
+  try {
+    const category = await Creategame.findById(req.params.id)
+      .populate("category", "title")
+      .populate("lead", "Name")
+      .populate("coLead", "Name");
+
+    if (!category) return res.status(404).send({ message: "single category not found" });
+    res.status(200).send(category);
+  } catch (error) {
+    res.status(500).send({ message: "Error fetching single category", error: error.message });
+  }
+});
+
 // GET: Fetch participants by subpost (lead and co lead)
 router.get("/users/accepted", async (req, res) => {
   try {
