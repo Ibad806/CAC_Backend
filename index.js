@@ -9,6 +9,7 @@ import eventRoutes from "./routers/eventRoutes.js";
 import smecpostRoutes from "./routers/smecpostRoutes.js";
 import categoryRoutes from "./routers/categoryRoutes.js";
 import gameRoutes from "./routers/gameRoutes.js";
+import judgeRoutes from "./routers/judgeRoutes.js";
 import passport from "passport";
 import session from "express-session";
 
@@ -64,6 +65,7 @@ app.use("/event", eventRoutes);
 app.use("/smecpost", smecpostRoutes);
 app.use("/category", categoryRoutes);
 app.use("/creategame", gameRoutes);
+app.use("/judge", judgeRoutes);
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
