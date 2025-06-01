@@ -2,33 +2,14 @@ import express from "express";
 import Category from "../models/Category.js";
 import SMECPost from "../models/SMECPost.js";
 import multer from "multer";
-import stream from "stream";
-// import cloudinary from "cloudinary";
-import cloudinary from "../utils/cloudinary.js"; // make sure path is correct
+import cloudinary from "cloudinary";
+import mongoose from "mongoose";
 
 const router = express.Router();
-// ✅ Use memory storage for stream upload
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-// ✅ Helper function to upload image to Cloudinary using buffer stream
-const uploadToCloudinary = async (file, folder = "category-images") => {
-  return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      { folder },
-      (error, result) => {
-        if (error) reject(error);
-        else resolve(result);
-      }
-    );
-
-    const bufferStream = new stream.PassThrough();
-    bufferStream.end(file.buffer);
-    bufferStream.pipe(uploadStream);
-  });
-};
-
-// ✅ CREATE Category
+// CREATE category
 router.post(
   "/categories",
   upload.fields([
@@ -39,24 +20,61 @@ router.post(
     try {
       const { title, description, lead, coLead } = req.body;
 
-      let cardImage = "", cardImagePublicId = "";
-      let bannerImage = "", bannerImagePublicId = "";
+      console.log("Request Body:", req.body);
+      console.log("Uploaded Files:", req.files);
 
-      // Upload card image
-      if (req.files?.cardImage?.[0]) {
-        const result = await uploadToCloudinary(req.files.cardImage[0]);
-        cardImage = result.secure_url;
-        cardImagePublicId = result.public_id;
+      let cardImage = "";
+      let cardImagePublicId = "";
+      let bannerImage = "";
+      let bannerImagePublicId = "";
+
+      // Helper function to upload image to Cloudinary
+      const uploadToCloudinary = async (file) => {
+        if (!file) return null;
+        
+        return new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            { folder: "category-images" },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          
+          // Create a readable stream from buffer
+          const bufferStream = new stream.PassThrough();
+          bufferStream.end(file.buffer);
+          bufferStream.pipe(uploadStream);
+        });
+      };
+
+      // Upload card image if exists
+      if (req.files?.cardImage && req.files.cardImage[0]) {
+        try {
+          const result = await uploadToCloudinary(req.files.cardImage[0]);
+          if (result) {
+            cardImage = result.secure_url;
+            cardImagePublicId = result.public_id;
+          }
+        } catch (uploadError) {
+          console.error("Error uploading card image:", uploadError);
+        }
       }
 
-      // Upload banner image
-      if (req.files?.bannerImage?.[0]) {
-        const result = await uploadToCloudinary(req.files.bannerImage[0]);
-        bannerImage = result.secure_url;
-        bannerImagePublicId = result.public_id;
+      // Upload banner image if exists
+      if (req.files?.bannerImage && req.files.bannerImage[0]) {
+        try {
+          const result = await uploadToCloudinary(req.files.bannerImage[0]);
+          if (result) {
+            bannerImage = result.secure_url;
+            bannerImagePublicId = result.public_id;
+          }
+        } catch (uploadError) {
+          console.error("Error uploading banner image:", uploadError);
+        }
       }
 
-      const newCategory = new Category({
+      const category = new Category({
         title,
         description,
         lead,
@@ -67,21 +85,20 @@ router.post(
         bannerImagePublicId,
       });
 
-      const savedCategory = await newCategory.save();
-      res.status(201).json(savedCategory);
-
+      await category.save();
+      res.status(201).json({ success: true, category });
     } catch (err) {
       console.error("Error creating category:", err);
       res.status(500).json({ 
         success: false, 
         error: err.message,
-        stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
       });
     }
   }
 );
 
-// ✅ UPDATE Category
+// UPDATE category
 router.put(
   "/categories/:id",
   upload.fields([
@@ -97,24 +114,62 @@ router.put(
 
       const { title, description, lead, coLead } = req.body;
 
-      // Upload & replace card image
-      if (req.files?.cardImage?.[0]) {
-        if (category.cardImagePublicId) {
-          await cloudinary.uploader.destroy(category.cardImagePublicId);
+      // Helper function for Cloudinary upload
+      const uploadImage = async (file, publicIdToDelete = null) => {
+        try {
+          // Delete old image if exists
+          if (publicIdToDelete) {
+            await cloudinary.uploader.destroy(publicIdToDelete);
+          }
+
+          // Upload new image using stream
+          return new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+              { folder: "category-images" },
+              (error, result) => {
+                if (error) reject(error);
+                else resolve(result);
+              }
+            );
+            
+            const bufferStream = new stream.PassThrough();
+            bufferStream.end(file.buffer);
+            bufferStream.pipe(uploadStream);
+          });
+        } catch (error) {
+          console.error("Image upload error:", error);
+          throw error;
         }
-        const result = await uploadToCloudinary(req.files.cardImage[0]);
-        category.cardImage = result.secure_url;
-        category.cardImagePublicId = result.public_id;
+      };
+
+      // Process card image if uploaded
+      if (req.files?.cardImage && req.files.cardImage[0]) {
+        try {
+          const result = await uploadImage(
+            req.files.cardImage[0],
+            category.cardImagePublicId
+          );
+          category.cardImage = result.secure_url;
+          category.cardImagePublicId = result.public_id;
+        } catch (error) {
+          console.error("Failed to update card image:", error);
+          // Continue with other updates even if image upload fails
+        }
       }
 
-      // Upload & replace banner image
-      if (req.files?.bannerImage?.[0]) {
-        if (category.bannerImagePublicId) {
-          await cloudinary.uploader.destroy(category.bannerImagePublicId);
+      // Process banner image if uploaded
+      if (req.files?.bannerImage && req.files.bannerImage[0]) {
+        try {
+          const result = await uploadImage(
+            req.files.bannerImage[0],
+            category.bannerImagePublicId
+          );
+          category.bannerImage = result.secure_url;
+          category.bannerImagePublicId = result.public_id;
+        } catch (error) {
+          console.error("Failed to update banner image:", error);
+          // Continue with other updates even if image upload fails
         }
-        const result = await uploadToCloudinary(req.files.bannerImage[0]);
-        category.bannerImage = result.secure_url;
-        category.bannerImagePublicId = result.public_id;
       }
 
       // Update other fields
@@ -124,23 +179,23 @@ router.put(
       category.coLead = coLead || category.coLead;
 
       const updatedCategory = await category.save();
-
+      
       res.json({
         success: true,
         category: updatedCategory,
-        message: "Category updated successfully",
+        message: "Category updated successfully"
       });
-
     } catch (err) {
       console.error("Error updating category:", err);
       res.status(500).json({ 
         success: false, 
         error: err.message,
-        stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
       });
     }
   }
 );
+
 // DELETE category
 router.delete("/categories/:id", async (req, res) => {
   try {
@@ -169,39 +224,28 @@ router.delete("/categories/:id", async (req, res) => {
 // GET all categories
 router.get("/categories", async (req, res) => {
   try {
+    console.log("Fetching categories from database...");
     const categories = await Category.find()
       .populate("lead")
       .populate("coLead");
+    console.log(`Found ${categories.length} categories`);
     res.json(categories);
   } catch (err) {
+    console.error("Category fetch error:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// GET - Single game by ID
-router.get("/categories/:id", async (req, res) => {
-  try {
-    console.log("Fetching category with ID:", req.params.id); // Debugging line
-    
-    const category = await Category.findById(req.params.id)
-
-    if (!category) return res.status(404).send({ message: "single category not found" });
-    res.status(200).send(category);
-  } catch (error) {
-    res.status(500).send({ message: "Error fetching single category", error: error.message });
-  }
-});
-
-// GET: Fetch participants by subpost (lead and co lead)
+// Replace the existing /users/accepted route with this:
 router.get("/users/accepted", async (req, res) => {
   try {
     const leadUsers = await SMECPost.find({
-      Post: { $in: ["E-Games", "Geek Gemes", "General Games"] },
+      Post: { $in: ["E-Games", "Geek Games", "General Games"] }, // Fixed typo: "Geek Games"
       subpost: "Lead",
     }).select("Name Email _id Post ContactNumber");
 
     const coLeadUsers = await SMECPost.find({
-      Post: { $in: ["E-Games", "Geek Gemes", "General Games"] },
+      Post: { $in: ["E-Games", "Geek Games", "General Games"] },
       subpost: "Co-Lead",
     }).select("Name Email _id Post ContactNumber");
 
@@ -220,5 +264,4 @@ router.get("/users/accepted", async (req, res) => {
     });
   }
 });
-
 export default router;

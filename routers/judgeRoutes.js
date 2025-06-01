@@ -1,7 +1,7 @@
 // routes/judgeRoutes.js
 import express from 'express';
 import bcrypt from 'bcrypt';
-import nodemailer from 'nodemailer';
+
 import Judge from '../models/Judge.js';
 import User from '../models/User.js';
 import cors from "cors";
@@ -57,13 +57,6 @@ router.post('/judges', async (req, res) => {
             gameTitle = game?.title || 'the assigned game';
         }
 
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
-        });
 
         const mailOptions = {
             from: process.env.EMAIL_USER,

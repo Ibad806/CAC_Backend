@@ -15,11 +15,14 @@ import session from "express-session";
 
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import AnnouncementRoutes from "./routers/AnnouncementRoutes.js"
 const app = express();
 
-app.use(helmet({
-  crossOriginOpenerPolicy: false, // disables COOP header
-})); // Security Headers
+app.use(
+  helmet({
+    crossOriginOpenerPolicy: false, // disables COOP header
+  })
+); // Security Headers
 
 app.use(
   rateLimit({
@@ -37,7 +40,7 @@ app.use(express.json());
 // https://co-curriculum-activities-cs-it.vercel.app
 app.use(
   cors({
-    origin: ["https://co-curriculum-activities-cs-it.vercel.app"],
+    origin: ["http://localhost:5173"],
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -45,13 +48,17 @@ app.use(
 );
 
 app.use(
-  session({ secret: process.env.GOOGLE_CLIENT_SECRET , resave: false, saveUninitialized: true })
+  session({
+    secret: process.env.GOOGLE_CLIENT_SECRET,
+    resave: false,
+    saveUninitialized: true,
+  })
 );
 app.use(passport.initialize());
 app.use(passport.session());
 
 mongoose
-  .connect(process.env.MONGODB_URI , {
+  .connect(process.env.MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
@@ -66,6 +73,7 @@ app.use("/smecpost", smecpostRoutes);
 app.use("/category", categoryRoutes);
 app.use("/creategame", gameRoutes);
 app.use("/judge", judgeRoutes);
+app.use("/announcement", AnnouncementRoutes)
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
