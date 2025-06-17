@@ -70,6 +70,7 @@ router.post("/register", async (req, res) => {
 });
 
 // 🟢 LOGIN API
+// 🟢 LOGIN API
 router.post("/login", async (req, res) => {
   const { error, value } = loginSchema.validate(req.body);
   if (error) {
@@ -86,9 +87,22 @@ router.post("/login", async (req, res) => {
     return res.status(403).json({ status: false, message: "Incorrect Credentials" });
   }
 
+  // Check if the user is a judge
+  if (user.role === 'judge') {
+    // Check if the judge exists and is active
+    const judge = await Judge.findOne({ email: user.email });
+    if (!judge) {
+      return res.status(403).json({ 
+        status: false, 
+        message: "Judge account not found" 
+      });
+    }
+  }
+
   const token = jwt.sign(user, process.env.AUTH_SECRET);
   res.status(200).json({ status: true, message: "User login successful", data: { user, token } });
 });
+  
 
 // 🔴 LOGOUT API
 router.post("/logout", (req, res) => {

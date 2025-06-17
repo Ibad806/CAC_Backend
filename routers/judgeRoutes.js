@@ -1,11 +1,9 @@
-// routes/judgeRoutes.js
 import express from 'express';
 import bcrypt from 'bcrypt';
-
 import Judge from '../models/Judge.js';
 import User from '../models/User.js';
 import cors from "cors";
-import Game from '../models/Creategame.js'; // Renamed for clarity
+import Game from '../models/Creategame.js';
 
 const router = express.Router();
 
@@ -28,8 +26,8 @@ router.post('/judges', async (req, res) => {
             return res.status(400).json({ message: 'User with this email already exists.' });
         }
 
-        // Hash password
-        const hashedPassword = await bcrypt.hash('123456', 10);
+        // Hash default password
+        const hashedPassword = await bcrypt.hash('12345678', 10);
 
         // Create user
         const newUser = new User({
@@ -45,28 +43,10 @@ router.post('/judges', async (req, res) => {
             name,
             email,
             contact,
-            assignedGames: assignedGames?.length > 0 ? [assignedGames[0]] : [],
+            assignedGames: assignedGames || [],
             user: newUser._id
         });
         await newJudge.save();
-
-        // Send email notification
-        let gameTitle = 'No game assigned';
-        if (assignedGames?.length > 0) {
-            const game = await Game.findById(assignedGames[0]);
-            gameTitle = game?.title || 'the assigned game';
-        }
-
-
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: email,
-            subject: 'Judge Assignment Notification',
-            text: `Dear ${name},\n\nYou have been assigned as a judge for: ${gameTitle}\n\nYour default password is: 123456\nPlease log in first and then change your password.\n Go to https://co-curriculum-activities-cs-it.vercel.app/judgespanel/profile\n\nBest regards,\nAdmin`,
-        };
-
-        await transporter.sendMail(mailOptions);
-        console.log("Email sent successfully to:", email);
 
         res.status(201).json({ 
             message: 'Judge created successfully',
@@ -86,20 +66,16 @@ router.post('/judges', async (req, res) => {
 router.put('/judges/:id', async (req, res) => {
     try {
         const { name, email, contact, assignedGames } = req.body;
-
-        // Validate single game assignment
-        if (assignedGames.length > 1) {
-            return res.status(400).json({ success: false, message: 'A judge can only be assigned to one game.' });
-        }
+        const judgeId = req.params.id;
 
         // Update judge
         const updatedJudge = await Judge.findByIdAndUpdate(
-            req.params.id,
+            judgeId,
             { 
                 name, 
                 email, 
                 contact, 
-                assignedGames: assignedGames.length > 0 ? [assignedGames[0]] : [] 
+                assignedGames: assignedGames || [] 
             },
             { new: true }
         );
@@ -130,12 +106,12 @@ router.put('/judges/:id', async (req, res) => {
 
 // GET - All judges
 router.get('/judges', async (req, res) => {
-    try {
-        const judges = await Judge.find({});
-        res.status(200).json(judges);
-    } catch (error) {
-        res.status(500).json({ message: 'Error fetching judges.', error: error.message });
-    }
+  try {
+    const judges = await Judge.find({}).populate('user', 'name email');
+    res.status(200).json(judges);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching judges.', error: error.message });
+  }
 });
 
 // GET - Single judge
@@ -154,17 +130,20 @@ router.get('/judges/:id', async (req, res) => {
 // DELETE - Remove judge
 router.delete('/judges/:id', async (req, res) => {
     try {
-        const judge = await Judge.findById(req.params.id);
+        const judgeId = req.params.id;
+        const judge = await Judge.findById(judgeId);
         
         if (!judge) {
             return res.status(404).json({ success: false, message: 'Judge not found.' });
         }
 
         // Delete corresponding user
-        await User.findByIdAndDelete(judge.user);
+        if (judge.user) {
+            await User.findByIdAndDelete(judge.user);
+        }
         
         // Delete judge
-        await Judge.findByIdAndDelete(req.params.id);
+        await Judge.findByIdAndDelete(judgeId);
 
         res.status(200).json({ 
             success: true, 
