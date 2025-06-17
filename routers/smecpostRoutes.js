@@ -8,17 +8,25 @@ const router = express.Router();
 // CREATE - POST: Apply for a post
 router.post("/smecpost", async (req, res) => {
   try {
-    const { name, rollNumber, phone, email, position, subpost, additionalDetails  } = req.body;
+    const {
+      name,
+      rollNumber,
+      phone,
+      email,
+      position,
+      subpost,
+      additionalDetails,
+    } = req.body;
 
     const newPost = new SMECPost({
       Name: name,
       RollNumber: rollNumber,
       ContactNumber: phone,
-      Email: email, 
+      Email: email,
       Post: position,
       subpost: subpost || "Lead",
       AdditionalDetails: additionalDetails, // Optional additional details field
-     Status: "Pending", // Default status
+      Status: "Pending", // Default status
     });
 
     await newPost.save();
@@ -38,96 +46,119 @@ router.get("/smecpost", async (req, res) => {
   }
 });
 
-
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 100, // limit each IP to 100 requests per windowMs
 });
 
 // Get application by email
-router.get('/application', limiter , async (req, res) => {
+router.get("/application", limiter, async (req, res) => {
   try {
     const { email } = req.query;
-    
+
     if (!email) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Email parameter is required' 
+        message: "Email parameter is required",
       });
     }
 
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Invalid email format' 
+        message: "Invalid email format",
       });
     }
 
-    const application = await SMECPost.find({ Email: email }).sort({ createdAt: -1 }).lean();
-    
+    const application = await SMECPost.find({ Email: email })
+      .sort({ createdAt: -1 })
+      .lean();
+
     if (!application) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: 'No application found for this email' 
+        message: "No application found for this email",
       });
     }
     console.log("APPLICATION", application);
-    
 
     res.json({
       success: true,
-      data: application
-
+      data: application,
     });
-
   } catch (error) {
-    console.error('Error fetching application:', error);
-    res.status(500).json({ 
+    console.error("Error fetching application:", error);
+    res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: "Internal server error",
     });
   }
 });
 
-// UPDATE - PUT: Update status of an application
+// In your backend route file (smecpost.js)
 router.put("/smecpost/:id", async (req, res) => {
   try {
     const { status } = req.body;
+    const { id } = req.params;
+
+    console.log(`Updating application ${id} to status ${status}`); // Debug log
 
     if (!["Accepted", "Rejected", "Pending"].includes(status)) {
-      return res.status(400).json({ message: "Invalid status value" });
+      console.error("Invalid status value:", status);
+      return res.status(400).json({ 
+        success: false,
+        message: "Invalid status value" 
+      });
     }
 
-    // Find the application
-    const application = await SMECPost.findById(req.params.id);
-
+    // Find the application first
+    const application = await SMECPost.findById(id);
     if (!application) {
-      return res.status(404).json({ message: "Application not found" });
+      console.error("Application not found:", id);
+      return res.status(404).json({ 
+        success: false,
+        message: "Application not found" 
+      });
     }
 
-    // Update application status
+    // Update the application status
     application.Status = status;
     await application.save();
 
     // If application is accepted, update user
     if (status === "Accepted") {
-      const user = await User.findOne({ email: application.Email });
-
-      if (user) {
-        user.isParticpant = true;
-        user.role = "isParticpant";
-        user.position = application.Post;     // Add these fields to your User schema if not already present
-        user.subpost = application.subpost;
-        await user.save();
+      try {
+        const user = await User.findOne({ email: application.Email });
+        if (user) {
+          user.isParticpant = true;
+          user.role = "isParticpant";
+          user.position = application.Post;
+          user.subpost = application.subpost;
+          await user.save();
+          console.log(`User ${user.email} updated successfully`);
+        } else {
+          console.warn(`User not found with email: ${application.Email}`);
+        }
+      } catch (userError) {
+        console.error("Error updating user:", userError);
+        // Don't fail the whole request if user update fails
       }
     }
 
-    res.status(200).json({ message: "Status updated", data: application });
+    res.status(200).json({ 
+      success: true,
+      message: "Status updated successfully",
+      data: application 
+    });
   } catch (error) {
     console.error("Error updating application:", error);
-    res.status(500).json({ message: "Error updating post", error });
+    res.status(500).json({ 
+      success: false,
+      message: "Internal server error",
+      error: error.message // Include error message in response
+    });
   }
 });
 
