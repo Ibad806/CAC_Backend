@@ -236,6 +236,22 @@ router.get("/categories", async (req, res) => {
   }
 });
 
+// GET category by ID
+router.get("/categories/:id", async (req, res) => {
+  try {
+    const category = await Category.findById(req.params.id)
+      .populate("lead")
+      .populate("coLead");
+      if (!category) {
+        return res.status(404).json({ error: "Category not found" });
+      }
+      res.json(category);
+      } catch (err) {
+        console.error("Category fetch error:", err);
+        res.status(500).json({ error: err.message });
+        }
+      });
+
 // Replace the existing /users/accepted route with this:
 router.get("/users/accepted", async (req, res) => {
   try {
