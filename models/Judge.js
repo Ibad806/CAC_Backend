@@ -7,8 +7,16 @@ const judgeSchema = new Schema({
   role: { type: String, default: "judge"},
   contact: { type: String, required: true },
   password: { type: String},
-  assignedGames: [{ type: mongoose.Schema.Types.ObjectId, ref: 'creategame' }],
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'Users' }, // Reference to the User model
+  assignedGames: [{ 
+    game: { type: mongoose.Schema.Types.ObjectId, ref: 'Creategame' },
+    status: { type: String, enum: ["pending", "completed"], default: "pending" },
+    result: {
+      winner: String,
+      runnerUp: String,
+      announcedAt: Date
+    }
+  }],
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'Users' },
 });
 
 const Judge = mongoose.model("Judge", judgeSchema);

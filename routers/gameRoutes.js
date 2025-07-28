@@ -174,4 +174,27 @@ router.delete("/creategame/:id", async (req, res) => {
   }
 });
 
+// Set game results
+router.put('/creategame/:id/results', async (req, res) => {
+  try {
+    const { winner, runnerUp } = req.body;
+    const game = await Creategame.findById(req.params.id);
+
+    if (!game) {
+      return res.status(404).json({ message: 'Game not found' });
+    }
+
+    game.results = {
+      winner,
+      runnerUp,
+      announcedAt: new Date()
+    };
+
+    await game.save();
+    res.json({ success: true, message: 'Results announced', game });
+  } catch (error) {
+    res.status(500).json({ message: 'Error setting results', error: error.message });
+  }
+});
+
 export default router;

@@ -7,9 +7,10 @@ import passport from "passport";
 import "../config/passport.js"; 
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import "dotenv/config";
-
 import { OAuth2Client } from "google-auth-library";
 import dotenv from "dotenv";
+import Judge from "../models/Judge.js";
+
 dotenv.config();
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -22,6 +23,13 @@ const checkTokenBlacklist = (req, res, next) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
 
+  if (!token) {
+    return res.status(401).json({
+      status: false,
+      message: "Authentication token missing",
+    });
+  }
+
   if (token && tokenBlacklist.has(token)) {
     return res.status(401).json({
       status: false,
@@ -30,7 +38,7 @@ const checkTokenBlacklist = (req, res, next) => {
   }
   next();
 };
-router.use(checkTokenBlacklist);
+// router.use(checkTokenBlacklist);
 
 // 🔹 Joi Validation Schemas
 const loginSchema = Joi.object({
@@ -43,7 +51,7 @@ const registerSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().min(6).required(),
   confirmPassword: Joi.string().valid(Joi.ref("password")).required(),
-  role: Joi.string().valid("user", "isParticpant", "judge", "admin").default("user"),
+  role: Joi.string().valid("user", "lead", "coLead", "admin", "judge").default("user"),
   isParticpant: Joi.boolean().default(false),
   CNIC: Joi.string().min(13).max(15).required(),
 });
@@ -69,7 +77,6 @@ router.post("/register", async (req, res) => {
   res.status(201).json({ status: true, message: "User registered successfully", data: newUser });
 });
 
-// 🟢 LOGIN API
 // 🟢 LOGIN API
 router.post("/login", async (req, res) => {
   const { error, value } = loginSchema.validate(req.body);
@@ -102,10 +109,43 @@ router.post("/login", async (req, res) => {
   const token = jwt.sign(user, process.env.AUTH_SECRET);
   res.status(200).json({ status: true, message: "User login successful", data: { user, token } });
 });
-  
+
+// 🟢 JUDGE LOGIN API
+router.post("/judge-login", async (req, res) => {
+  const { error, value } = loginSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ status: false, message: error.details[0].message });
+  }
+
+  const user = await User.findOne({ email: value.email });
+  if (!user) {
+    return res.status(403).json({ status: false, message: "User is not registered" });
+  }
+
+  // Check if the user is a judge
+  if (user.role !== 'judge') {
+    return res.status(403).json({ 
+      status: false, 
+      message: "Access restricted to judges only" 
+    });
+  }
+
+  const isPasswordValid = await bcrypt.compare(value.password, user.password);
+  if (!isPasswordValid) {
+    return res.status(403).json({ status: false, message: "Incorrect Credentials" });
+  }
+
+  const token = jwt.sign({ 
+    id: user._id, 
+    email: user.email, 
+    role: user.role 
+  }, process.env.AUTH_SECRET, { expiresIn: '1d' });
+
+  res.status(200).json({ status: true, message: "Judge login successful", data: { user, token } });
+});
 
 // 🔴 LOGOUT API
-router.post("/logout", (req, res) => {
+router.post("/logout", checkTokenBlacklist, (req, res) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
 
@@ -211,7 +251,5 @@ router.post("/google", async (req, res) => {
       res.status(500).json({ message: "Google authentication failed" });
   }
 });
-
-
 
 export default router;

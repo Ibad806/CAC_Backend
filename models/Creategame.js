@@ -14,6 +14,18 @@ const creategameSchema = new mongoose.Schema({
   price: { type: Number, required: true },
   player: { type: Number, required: true },
   venue: { type: String, required: true },
+  participants: [
+    {
+      user: { type: mongoose.Schema.Types.ObjectId, ref: "Users" },
+      ticketId: String,
+      registeredAt: { type: Date, default: Date.now },
+    },
+  ],
+  results: {
+    winner: { type: mongoose.Schema.Types.ObjectId, ref: "Users" },
+    runnerUp: { type: mongoose.Schema.Types.ObjectId, ref: "Users" },
+    announcedAt: Date,
+  },
 });
 
 const Creategame = mongoose.model("Creategame", creategameSchema, "creategame");

@@ -12,35 +12,32 @@ import gameRoutes from "./routers/gameRoutes.js";
 import judgeRoutes from "./routers/judgeRoutes.js";
 import passport from "passport";
 import session from "express-session";
-
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import AnnouncementRoutes from "./routers/AnnouncementRoutes.js"
+import AnnouncementRoutes from "./routers/AnnouncementRoutes.js";
+import judgePanelRoutes from "./routers/judgePanelRoutes.js";
+
 const app = express();
 
 app.use(
   helmet({
-    crossOriginOpenerPolicy: false, // disables COOP header
-  })
-); // Security Headers
-
-app.use(
-  rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // 100 requests per IP
+    crossOriginOpenerPolicy: false,
   })
 );
 
-// const PORT = 4000;
+app.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+  })
+);
 
 app.use(morgan("tiny"));
 app.use(express.json());
 
-// http://localhost:5173
-// https://co-curriculum-activities-cs-it.vercel.app
 app.use(
   cors({
-    origin: ["https://co-curriculum-activities-cs-it.vercel.app"],
+    origin: ["http://localhost:5173"],
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -73,7 +70,8 @@ app.use("/smecpost", smecpostRoutes);
 app.use("/category", categoryRoutes);
 app.use("/creategame", gameRoutes);
 app.use("/judge", judgeRoutes);
-app.use("/announcement", AnnouncementRoutes)
+app.use("/announcement", AnnouncementRoutes);
+app.use("/judge-panel", judgePanelRoutes);
 
 app.get("/", (req, res) => {
   res.send("Hello World!");

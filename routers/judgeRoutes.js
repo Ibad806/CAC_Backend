@@ -38,12 +38,15 @@ router.post('/judges', async (req, res) => {
         });
         await newUser.save();
 
-        // Create judge
+        // Create judge with assigned games in the new structure
         const newJudge = new Judge({
             name,
             email,
             contact,
-            assignedGames: assignedGames || [],
+            assignedGames: (assignedGames || []).map(gameId => ({ 
+                game: gameId,
+                status: "pending"
+            })),
             user: newUser._id
         });
         await newJudge.save();
@@ -75,7 +78,10 @@ router.put('/judges/:id', async (req, res) => {
                 name, 
                 email, 
                 contact, 
-                assignedGames: assignedGames || [] 
+                assignedGames: (assignedGames || []).map(gameId => ({ 
+                    game: gameId,
+                    status: "pending"
+                }))
             },
             { new: true }
         );
