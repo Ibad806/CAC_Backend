@@ -38,7 +38,7 @@ app.use(morgan("tiny"));
 app.use(express.json());
 
 //http://localhost:5173
-//https://co-curriculum-activities-cs-it.vercel.app/
+//https://co-curriculum-activities-cs-it.vercel.app
 
 app.use(
   cors({
