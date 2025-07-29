@@ -38,7 +38,37 @@ const checkTokenBlacklist = (req, res, next) => {
   }
   next();
 };
-// router.use(checkTokenBlacklist);
+
+// 🔹 Token Verification Middleware
+const verifyToken = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({
+      status: false,
+      message: "Authentication token missing",
+    });
+  }
+
+  if (tokenBlacklist.has(token)) {
+    return res.status(401).json({
+      status: false,
+      message: "Token is no longer valid",
+    });
+  }
+
+  jwt.verify(token, process.env.AUTH_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({
+        status: false,
+        message: "Invalid token",
+      });
+    }
+    req.user = user;
+    next();
+  });
+};
 
 // 🔹 Joi Validation Schemas
 const loginSchema = Joi.object({
@@ -160,6 +190,91 @@ router.post("/logout", checkTokenBlacklist, (req, res) => {
     tokenBlacklist.add(token);
     res.status(200).json({ status: true, message: "User logged out successfully" });
   });
+});
+
+// 🔹 Profile API Endpoints
+
+// 🟢 GET USER PROFILE
+router.get('/profile', verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('-password');
+    if (!user) {
+      return res.status(404).json({ status: false, message: "User not found" });
+    }
+    
+    // Format date for frontend
+    const formattedUser = {
+      ...user._doc,
+      dob: user.dob ? new Date(user.dob).toISOString().split('T')[0] : null
+    };
+    
+    res.json({ status: true, data: formattedUser });
+  } catch (error) {
+    res.status(500).json({ status: false, message: error.message });
+  }
+});
+
+// 🟢 UPDATE USER PROFILE
+router.put('/profile', verifyToken, async (req, res) => {
+  const { name, rollNo, university, phone, dob, language } = req.body;
+
+  try {
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        name,
+        rollNo,
+        university,
+        phone,
+        dob: dob ? new Date(dob) : null,
+        language
+      },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!updatedUser) {
+      return res.status(404).json({ status: false, message: "User not found" });
+    }
+
+    // Format date for frontend
+    const formattedUser = {
+      ...updatedUser._doc,
+      dob: updatedUser.dob ? new Date(updatedUser.dob).toISOString().split('T')[0] : null
+    };
+    
+    res.json({ 
+      status: true, 
+      data: formattedUser, 
+      message: "Profile updated successfully" 
+    });
+  } catch (error) {
+    res.status(500).json({ status: false, message: error.message });
+  }
+});
+
+// 🟢 CHANGE PASSWORD
+router.put('/change-password', verifyToken, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ status: false, message: "User not found" });
+    }
+
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ status: false, message: "Current password is incorrect" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.json({ status: true, message: "Password changed successfully" });
+  } catch (error) {
+    res.status(500).json({ status: false, message: error.message });
+  }
 });
 
 // 🔹 Google OAuth Configuration

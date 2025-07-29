@@ -1,4 +1,3 @@
-// routes/eventRoutes.js
 import express from "express";
 import Event from "../models/Event.js";
 
@@ -8,13 +7,11 @@ const router = express.Router();
 router.post("/events", async (req, res) => {
   try {
     const newEvent = new Event(req.body);
-    console.log("Received Event:", newEvent);
     await newEvent.save();
     res
       .status(201)
       .send({ message: "Event created successfully", event: newEvent });
   } catch (error) {
-    console.error("Error creating event:", error); // 🔥 This line helps a lot
     res
       .status(400)
       .send({ message: "Failed to create event", error: error.message });
