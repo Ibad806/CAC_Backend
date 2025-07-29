@@ -17,6 +17,7 @@ import rateLimit from "express-rate-limit";
 import AnnouncementRoutes from "./routers/AnnouncementRoutes.js";
 import judgePanelRoutes from "./routers/judgePanelRoutes.js";
 import newsRoutes from "./routers/newsRoutes.js";
+import playerRoutes from "./routers/playerRoutes.js";
 
 const app = express();
 
@@ -41,7 +42,7 @@ app.use(express.json());
 
 app.use(
   cors({
-    origin: ["https://co-curriculum-activities-cs-it.vercel.app"],
+    origin: ["https://co-curriculum-activities-cs-it.vercel.app/"],
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -77,6 +78,7 @@ app.use("/judge", judgeRoutes);
 app.use("/announcement", AnnouncementRoutes);
 app.use("/judge-panel", judgePanelRoutes);
 app.use("/news", newsRoutes);
+app.use("/player", playerRoutes);
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
