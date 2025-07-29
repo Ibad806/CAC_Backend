@@ -42,7 +42,7 @@ app.use(express.json());
 
 app.use(
   cors({
-    origin: ["https://co-curriculum-activities-cs-it.vercel.app/"],
+    origin: ["https://co-curriculum-activities-cs-it.vercel.app"],
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
