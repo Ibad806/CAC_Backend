@@ -16,6 +16,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import AnnouncementRoutes from "./routers/AnnouncementRoutes.js";
 import judgePanelRoutes from "./routers/judgePanelRoutes.js";
+import newsRoutes from "./routers/newsRoutes.js";
 
 const app = express();
 
@@ -72,9 +73,11 @@ app.use("/creategame", gameRoutes);
 app.use("/judge", judgeRoutes);
 app.use("/announcement", AnnouncementRoutes);
 app.use("/judge-panel", judgePanelRoutes);
+app.use("/news", newsRoutes);
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
+app.use('/uploads', express.static('uploads'));
 app.listen(process.env.PORT, () => console.log("SERVER IS RUNNING"));
