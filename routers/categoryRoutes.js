@@ -31,7 +31,7 @@ router.post(
       // Helper function to upload image to Cloudinary
       const uploadToCloudinary = async (file) => {
         if (!file) return null;
-        
+
         return new Promise((resolve, reject) => {
           const uploadStream = cloudinary.uploader.upload_stream(
             { folder: "category-images" },
@@ -40,7 +40,7 @@ router.post(
               else resolve(result);
             }
           );
-          
+
           // Create a readable stream from buffer
           const bufferStream = new stream.PassThrough();
           bufferStream.end(file.buffer);
@@ -89,10 +89,10 @@ router.post(
       res.status(201).json({ success: true, category });
     } catch (err) {
       console.error("Error creating category:", err);
-      res.status(500).json({ 
-        success: false, 
+      res.status(500).json({
+        success: false,
         error: err.message,
-        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+        stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
       });
     }
   }
@@ -109,7 +109,9 @@ router.put(
     try {
       const category = await Category.findById(req.params.id);
       if (!category) {
-        return res.status(404).json({ success: false, error: "Category not found" });
+        return res
+          .status(404)
+          .json({ success: false, error: "Category not found" });
       }
 
       const { title, description, lead, coLead } = req.body;
@@ -131,7 +133,7 @@ router.put(
                 else resolve(result);
               }
             );
-            
+
             const bufferStream = new stream.PassThrough();
             bufferStream.end(file.buffer);
             bufferStream.pipe(uploadStream);
@@ -179,18 +181,18 @@ router.put(
       category.coLead = coLead || category.coLead;
 
       const updatedCategory = await category.save();
-      
+
       res.json({
         success: true,
         category: updatedCategory,
-        message: "Category updated successfully"
+        message: "Category updated successfully",
       });
     } catch (err) {
       console.error("Error updating category:", err);
-      res.status(500).json({ 
-        success: false, 
+      res.status(500).json({
+        success: false,
         error: err.message,
-        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+        stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
       });
     }
   }
@@ -242,15 +244,15 @@ router.get("/categories/:id", async (req, res) => {
     const category = await Category.findById(req.params.id)
       .populate("lead")
       .populate("coLead");
-      if (!category) {
-        return res.status(404).json({ error: "Category not found" });
-      }
-      res.json(category);
-      } catch (err) {
-        console.error("Category fetch error:", err);
-        res.status(500).json({ error: err.message });
-        }
-      });
+    if (!category) {
+      return res.status(404).json({ error: "Category not found" });
+    }
+    res.json(category);
+  } catch (err) {
+    console.error("Category fetch error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Replace the existing /users/accepted route with this:
 router.get("/users/accepted", async (req, res) => {
