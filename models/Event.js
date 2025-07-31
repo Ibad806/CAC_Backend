@@ -5,23 +5,25 @@ const EventSchema = new Schema(
   {
     title: { type: String, required: true, trim: true },
     startdate: { type: String, required: true },
+    enddate: { type: String },
     category: {
       type: String,
       enum: ["ticketing", "nonticketing"],
-      default: "ticketing",
       required: true,
     },
-    subcategory: { type: String, required: true },
-    description: { type: String },
+    subcategory: { type: String },
+    description: { type: String, required: true },
     status: {
       type: String,
       enum: ["active", "inactive", "complete", "draft"],
       default: "active",
     },
-    ticketPrice: { type: String },
-    eventimageurl: { type: String },
+    ticketPrice: { type: Number },
+    bannerImage: { type: String, required: true },
+    galleryImages: { type: [String] },
+    locationDetails: { type: String, default: "CS&IT Department" },
     registrationDeadline: { type: String },
-    locationDetails: { type: String },
+    customRoute: { type: String, unique: true }
   },
   { timestamps: true }
 );
