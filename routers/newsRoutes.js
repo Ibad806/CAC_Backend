@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import News from '../models/news.js';
+import News from '../models/News.js';
 import fs from 'fs';
 import path from 'path';
 
