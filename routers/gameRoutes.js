@@ -145,6 +145,7 @@ router.get("/creategame", async (req, res) => {
       .status(500)
       .send({ message: "Failed to fetch games", error: error.message });
   }
+  console.log("ijrf")
 });
 
 // GET - Single game by ID
