@@ -16,7 +16,7 @@ const SMECPostSchema = new Schema(
     },
     categoryInterestedIn: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Category",
+      ref: "Category jjjjjj",
     },
     postAppliedFor: {
       type: String,
