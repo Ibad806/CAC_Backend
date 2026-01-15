@@ -79,7 +79,7 @@ router.post('/creategame', upload.single('bannerImage'), async (req, res) => {
       player,
       venue,
     });
-    
+    console.log(newGame)
 
     await newGame.save();
 
